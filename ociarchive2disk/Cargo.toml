@@ -1,0 +1,15 @@
+[package]
+name = "ociarchive2disk"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+oci-distribution = "=0.11.0"
+tokio = { version = "1", features = ["full"] }
+clap = { version = "4.5.9", features = ["derive"] }
+tracing-subscriber = "0.3.18"
+tracing = "0.1.40"
+serde_json = "1.0.120"
+envy = "0.4.2"
+serde = "1.0.204"
+async-std = "1.12.0"
