@@ -2,6 +2,7 @@
 name = "ociarchive2disk"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
 
 [dependencies]
 oci-distribution = "=0.11.0"
