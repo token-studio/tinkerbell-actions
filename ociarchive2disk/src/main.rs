@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use envy::from_env;
-use oci_distribution::{Client, Reference, secrets::RegistryAuth};
+use oci_distribution::{secrets::RegistryAuth, Client, Reference};
 use serde::Deserialize;
 use tracing_subscriber::fmt;
 use tracing_subscriber::prelude::*;
@@ -9,18 +9,12 @@ use tracing_subscriber::prelude::*;
 /// Pull a WebAssembly module from a OCI container registry
 #[derive(Debug)]
 pub(crate) struct Cli {
-    /// Enable verbose mode
-    pub verbose: bool,
-
     /// Perform anonymous operation, by default the tool tries to reuse the docker credentials read
     /// from the default docker file
     pub anonymous: bool,
 
     /// Pull image from registry using HTTP instead of HTTPS
     pub insecure: bool,
-
-    /// Enable json output
-    pub json: bool,
 
     /// Name of the image to pull
     image: String,
@@ -54,9 +48,7 @@ pub async fn main() {
         }
     };
     let cli = Cli {
-        verbose: true,
         insecure: false,
-        json: true,
         anonymous: true,
         image: envs.url,
     };
@@ -66,7 +58,13 @@ pub async fn main() {
         .init();
 
     let reference: Reference = cli.image.parse().expect("Not a valid image reference");
-    let auth = RegistryAuth::Anonymous;
+    let auth: RegistryAuth;
+    if cli.anonymous {
+        auth = RegistryAuth::Anonymous;
+    } else {
+        // TODO: auth
+        auth = RegistryAuth::Anonymous;
+    }
 
     let client_config = build_client_config(&cli);
     let client = Client::new(client_config);
