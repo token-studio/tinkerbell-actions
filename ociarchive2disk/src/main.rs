@@ -17,7 +17,7 @@ pub(crate) struct Cli {
     pub insecure: bool,
 
     /// Name of the image to pull
-    image: String,
+    pub image: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -77,12 +77,25 @@ pub async fn main() {
         .expect("Cannot pull Wasm module")
         .layers
         .into_iter()
-        .next()
+        .next();
+
+    let binding = image.clone().unwrap().annotations.unwrap();
+    let image_name = binding
+        .get("org.opencontainers.image.title")
+        .expect("no annotation found");
+    let image_bytes = image
+        .clone()
         .map(|layer| layer.data)
         .expect("No data found");
-    async_std::fs::write(envs.disk, image)
+
+    async_std::fs::write(format!("/tmp/{image_name}"), image_bytes)
         .await
         .expect("Cannot write to file");
+    let mime = new_mime_guess::from_path(image_name)
+        .first()
+        .expect("mime not found");
     // TODO: decompress
+    if (mime == "application/zstd") {}
+
     // TODO: write to disk
 }
