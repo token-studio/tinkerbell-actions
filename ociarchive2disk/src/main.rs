@@ -1,8 +1,10 @@
 use std::fmt::Debug;
+use std::io::Cursor;
 
 use envy::from_env;
 use oci_distribution::{secrets::RegistryAuth, Client, Reference};
 use serde::Deserialize;
+use tar::Archive;
 use tracing_subscriber::fmt;
 use tracing_subscriber::prelude::*;
 
@@ -92,14 +94,33 @@ pub async fn main() {
         .map(|layer| layer.data)
         .expect("No data found");
 
-    async_std::fs::write(format!("/tmp/{image_name}"), image_bytes)
-        .await
-        .expect("Cannot write to file");
     let mime = new_mime_guess::from_path(image_name)
         .first()
         .expect("mime not found");
+    println!("I've got MIME!");
+
     // TODO: decompress
-    if mime == "application/zstd" {}
+    let decompressed: Vec<u8>;
+    match mime.to_string().as_str() {
+        "application/zstd" => {
+            println!("ZSTD!");
+            let cursor = Cursor::new(image_bytes);
+            decompressed = zstd::decode_all(cursor).expect("Cannot decompress");
+        }
+        "application/x-tar" => {
+            decompressed = image_bytes;
+        }
+        _ => {
+            panic!("Unsupported mime type: {}", mime);
+        }
+    }
+
+    println!("Decompressed!");
 
     // TODO: write to disk
+    let mut archive = Archive::new(Cursor::new(decompressed));
+    for file in archive.entries().expect("Cannot read archive") {
+        let entry = file.expect("Cannot read file");
+        println!("{:?}", entry.header().path());
+    }
 }
