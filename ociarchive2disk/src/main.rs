@@ -74,7 +74,7 @@ pub async fn main() {
     let image = client
         .pull(&reference, &auth, accepted_media_types)
         .await
-        .expect("Cannot pull Wasm module")
+        .expect("Cannot pull OCI layer")
         .layers
         .into_iter()
         .next();
