@@ -79,7 +79,11 @@ pub async fn main() {
         .into_iter()
         .next();
 
-    let binding = image.clone().unwrap().annotations.unwrap();
+    let binding = image
+        .clone()
+        .expect("no image found")
+        .annotations
+        .expect("no annotations found");
     let image_name = binding
         .get("org.opencontainers.image.title")
         .expect("no annotation found");
@@ -95,7 +99,7 @@ pub async fn main() {
         .first()
         .expect("mime not found");
     // TODO: decompress
-    if (mime == "application/zstd") {}
+    if mime == "application/zstd" {}
 
     // TODO: write to disk
 }
