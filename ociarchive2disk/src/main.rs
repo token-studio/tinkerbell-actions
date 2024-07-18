@@ -5,8 +5,6 @@ use envy::from_env;
 use oci_distribution::{secrets::RegistryAuth, Client, Reference};
 use serde::Deserialize;
 use tar::Archive;
-use tracing_subscriber::fmt;
-use tracing_subscriber::prelude::*;
 
 /// Pull a WebAssembly module from a OCI container registry
 #[derive(Debug)]
@@ -55,9 +53,6 @@ pub async fn main() {
         image: envs.url,
     };
     println!("{:?}", cli);
-    tracing_subscriber::registry()
-        .with(fmt::layer().with_writer(std::io::stderr))
-        .init();
 
     let reference: Reference = cli.image.parse().expect("Not a valid image reference");
     let auth: RegistryAuth;
