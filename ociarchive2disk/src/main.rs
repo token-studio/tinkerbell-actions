@@ -2,6 +2,7 @@ use std::fmt::Debug;
 use std::io::Cursor;
 
 use envy::from_env;
+use oci_distribution::client::ImageLayer;
 use oci_distribution::{secrets::RegistryAuth, Client, Reference};
 use serde::Deserialize;
 use tar::Archive;
@@ -74,20 +75,11 @@ pub async fn main() {
         .expect("Cannot pull OCI layer")
         .layers
         .into_iter()
-        .next();
+        .next()
+        .expect("no image found");
 
-    let binding = image
-        .clone()
-        .expect("no image found")
-        .annotations
-        .expect("no annotations found");
-    let image_name = binding
-        .get("org.opencontainers.image.title")
-        .expect("no annotation found");
-    let image_bytes = image
-        .clone()
-        .map(|layer| layer.data)
-        .expect("No data found");
+    let image_name = get_image_name_from_layer(&image);
+    let image_bytes = image.data;
 
     let mime = new_mime_guess::from_path(image_name)
         .first()
@@ -99,11 +91,10 @@ pub async fn main() {
     match mime.to_string().as_str() {
         "application/zstd" => {
             println!("ZSTD!");
-            let cursor = Cursor::new(image_bytes);
-            decompressed = zstd::decode_all(cursor).expect("Cannot decompress");
+            decompressed = decompress_zstd(&image_bytes);
         }
         "application/x-tar" => {
-            decompressed = image_bytes;
+            decompressed = image_bytes.clone();
         }
         _ => {
             panic!("Unsupported mime type: {}", mime);
@@ -113,7 +104,26 @@ pub async fn main() {
     println!("Decompressed!");
 
     // TODO: write to disk
-    let mut archive = Archive::new(Cursor::new(decompressed));
+    write_to_disk(&decompressed);
+}
+
+fn get_image_name_from_layer(layer: &ImageLayer) -> String {
+    layer
+        .annotations
+        .as_ref()
+        .expect("no annotations found")
+        .get("org.opencontainers.image.title")
+        .expect("no annotation found")
+        .to_string()
+}
+
+fn decompress_zstd(zstd_bytes: &Vec<u8>) -> Vec<u8> {
+    let cursor = Cursor::new(zstd_bytes);
+    zstd::decode_all(cursor).expect("Cannot decompress")
+}
+
+fn write_to_disk(tar_bytes: &Vec<u8>) {
+    let mut archive = Archive::new(Cursor::new(tar_bytes));
     for file in archive.entries().expect("Cannot read archive") {
         let entry = file.expect("Cannot read file");
         println!("{:?}", entry.header().path());
