@@ -94,7 +94,7 @@ pub async fn main() {
             decompressed = decompress_zstd(&image_bytes);
         }
         "application/x-tar" => {
-            decompressed = image_bytes.clone();
+            decompressed = image_bytes;
         }
         _ => {
             panic!("Unsupported mime type: {}", mime);
