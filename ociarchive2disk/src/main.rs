@@ -90,8 +90,7 @@ pub async fn main() {
     let decompressed: Vec<u8>;
     match mime.to_string().as_str() {
         "application/zstd" => {
-            println!("ZSTD!");
-            decompressed = decompress_zstd(image_bytes);
+            decompressed = decompress_zstd(&image_bytes);
         }
         "application/x-tar" => {
             decompressed = image_bytes;
@@ -101,12 +100,9 @@ pub async fn main() {
         }
     }
 
-    println!("Decompressed!");
-
     // TODO: write to disk
     mount_disk(&envs.disk);
-    let include_dir = "root.x86_64/".to_string();
-    write_to_dir(decompressed, &envs.disk, &include_dir);
+    write_to_dir(&decompressed, &envs.disk, &false);
 }
 
 fn get_image_name_from_layer(layer: &ImageLayer) -> String {
@@ -119,7 +115,7 @@ fn get_image_name_from_layer(layer: &ImageLayer) -> String {
         .to_string()
 }
 
-fn decompress_zstd(zstd_bytes: Vec<u8>) -> Vec<u8> {
+fn decompress_zstd(zstd_bytes: &Vec<u8>) -> Vec<u8> {
     let cursor = Cursor::new(zstd_bytes);
     zstd::decode_all(cursor).expect("Cannot decompress")
 }
@@ -128,38 +124,13 @@ fn mount_disk(disk: &String) {
     println!("{}", disk);
 }
 
-fn write_to_dir(tar_bytes: Vec<u8>, dest_dir: &String, include_dir: &String) {
+fn write_to_dir(tar_bytes: &Vec<u8>, dest_dir: &String, overwrite: &bool) {
     println!("{}", dest_dir);
     let mut archive = Archive::new(Cursor::new(tar_bytes));
     archive.set_preserve_ownerships(true);
     archive.set_preserve_permissions(true);
     archive.set_ignore_zeros(true);
     archive.set_unpack_xattrs(true);
-
-    for file in archive.entries().expect("Cannot read archive") {
-        let mut entry = file.expect("Cannot read file");
-        let path = entry
-            .path()
-            .expect("no path info")
-            .to_str()
-            .expect("path cannot convert to str")
-            .to_string();
-
-        if !path.starts_with(include_dir) {
-            continue;
-        }
-
-        println!("File: {}", path);
-        println!("Out to: {}", path.strip_prefix(include_dir).unwrap());
-        entry.set_preserve_permissions(true);
-        entry.set_preserve_mtime(true);
-        entry.set_unpack_xattrs(true);
-        entry
-            .unpack(format!(
-                "{}/{}",
-                dest_dir,
-                path.strip_prefix(include_dir).unwrap()
-            ))
-            .expect("tar unpack failed");
-    }
+    archive.set_overwrite(overwrite.to_owned());
+    archive.unpack(dest_dir).unwrap();
 }
