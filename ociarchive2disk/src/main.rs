@@ -56,18 +56,16 @@ pub async fn main() {
     println!("{:?}", cli);
 
     let reference: Reference = cli.image.parse().expect("Not a valid image reference");
-    let auth: RegistryAuth;
-    if cli.anonymous {
-        auth = RegistryAuth::Anonymous;
+    let auth = if cli.anonymous {
+        RegistryAuth::Anonymous
     } else {
         // TODO: auth
-        auth = RegistryAuth::Anonymous;
-    }
+        RegistryAuth::Anonymous
+    };
 
     let client_config = build_client_config(&cli);
     let client = Client::new(client_config);
-    let mut accepted_media_types = Vec::new();
-    accepted_media_types.push("application/vnd.oci.image.layer.v1.tar");
+    let accepted_media_types: Vec<&str> = vec!["application/vnd.oci.image.layer.v1.tar"];
 
     let image = client
         .pull(&reference, &auth, accepted_media_types)
@@ -84,21 +82,14 @@ pub async fn main() {
     let mime = new_mime_guess::from_path(image_name)
         .first()
         .expect("mime not found");
-    println!("MIME: {}", mime.to_string());
+    println!("MIME: {}", mime);
 
     // TODO: decompress
-    let decompressed: Vec<u8>;
-    match mime.to_string().as_str() {
-        "application/zstd" => {
-            decompressed = decompress_zstd(&image_bytes);
-        }
-        "application/x-tar" => {
-            decompressed = image_bytes;
-        }
-        _ => {
-            panic!("Unsupported mime type: {}", mime);
-        }
-    }
+    let decompressed = match mime.to_string().as_str() {
+        "application/zstd" => decompress_zstd(&image_bytes),
+        "application/x-tar" => image_bytes,
+        _ => panic!("Unsupported mime type: {}", mime),
+    };
 
     // TODO: write to disk
     mount_disk(&envs.disk);
