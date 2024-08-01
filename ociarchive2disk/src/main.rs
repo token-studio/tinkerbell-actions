@@ -92,7 +92,7 @@ pub async fn main() {
         _ => panic!("Unsupported mime type: {}", mime),
     };
 
-    const TAR_EXTRACT_TO: &str = "tar_extract_dir";
+    const TAR_EXTRACT_TO: &str = "/mnt";
     let mount = mount_disk(&envs.disk, TAR_EXTRACT_TO, &envs.mount_options);
     write_to_dir(&decompressed, mount.target_path(), &true);
     println!("everything is ok");
@@ -121,7 +121,7 @@ fn mount_disk(disk: &str, mount_to: &str, options: &str) -> UnmountDrop<Mount> {
             eprintln!("open dir error: {}", why);
             println!("trying recover...");
             fs::create_dir(mount_to).unwrap();
-            println!("error recovered by creating dir!");
+            println!("recovered by creating dir!");
         }
     }
     let mount_result = Mount::builder()
